@@ -1,7 +1,9 @@
 {
-    "java.project.sourcePaths": ["src"],
+    "java.project.sourcePaths": [
+        "src"
+    ],
     "java.project.outputPath": "bin",
     "java.project.referencedLibraries": [
-        "lib/**/*.jar"
+        "/Users/oreadebiyi/Library/CloudStorage/OneDrive-TechnologicalUniversityDublin/4th Year/Software Patterns/CA3/RefactoringExercise2025/lib/miglayout-swing-5.3.jar"
     ]
 }
