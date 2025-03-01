@@ -588,14 +588,15 @@ public class EmployeeDetails extends JFrame implements ActionListener, ItemListe
 		// loop until all Employees are added to vector
 		do {
 			empDetails = new Vector<Object>();
-			empDetails.addElement(new Integer(currentEmployee.getEmployeeId()));
+
+			empDetails.addElement(Integer.valueOf(currentEmployee.getEmployeeId()));
 			empDetails.addElement(currentEmployee.getPps());
 			empDetails.addElement(currentEmployee.getSurname());
 			empDetails.addElement(currentEmployee.getFirstName());
-			empDetails.addElement(new Character(currentEmployee.getGender()));
+			empDetails.addElement(Character.valueOf(currentEmployee.getGender()));
 			empDetails.addElement(currentEmployee.getDepartment());
-			empDetails.addElement(new Double(currentEmployee.getSalary()));
-			empDetails.addElement(new Boolean(currentEmployee.getFullTime()));
+			empDetails.addElement(Double.valueOf(currentEmployee.getSalary()));
+			empDetails.addElement(Boolean.valueOf(currentEmployee.getFullTime()));
 
 			allEmployee.addElement(empDetails);
 			nextRecord();// look for next record
