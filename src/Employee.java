@@ -106,7 +106,6 @@ public class Employee{
 	}
 
 	// Display Employee details
-    @Override
 	public String toString() {
 		String bool = "";
 		if (fullTime)

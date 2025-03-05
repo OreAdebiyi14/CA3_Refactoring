@@ -12,6 +12,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.DecimalFormat;
 import java.util.Vector;
+
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -24,7 +25,6 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
 import net.miginfocom.swing.MigLayout;
-
 
 public class EmployeeSummaryDialog extends JDialog implements ActionListener {
 	// vector with all Employees details
@@ -57,7 +57,6 @@ public class EmployeeSummaryDialog extends JDialog implements ActionListener {
 		// column left alignment 
 		DefaultTableCellRenderer leftRenderer = new DefaultTableCellRenderer();
 		Vector<String> header = new Vector<String>();
-		Vector<Vector<Object>> data = new Vector<>();
 		// header names
 		String[] headerName = { "ID", "PPS Number", "Surname", "First Name", "Gender", "Department", "Salary",
 				"Full Time" };
@@ -66,22 +65,25 @@ public class EmployeeSummaryDialog extends JDialog implements ActionListener {
 		centerRenderer.setHorizontalAlignment(JLabel.CENTER);
 		leftRenderer.setHorizontalAlignment(JLabel.LEFT);
 		// add headers
-		for (Object obj : this.allEmployees) {
-			if (obj instanceof Vector) { 
-				data.add((Vector<Object>) obj); // Cast and add
-			}
+		for (int i = 0; i < headerName.length; i++) {
+			header.addElement(headerName[i]);
 		}// end for
 		// construnct table and choose table model for each column
-		tableModel = new DefaultTableModel(data, header) {
-			public Class<?> getColumnClass(int c) {
+		tableModel = new DefaultTableModel(this.allEmployees, header) {
+			public Class getColumnClass(int c) {
 				switch (c) {
-					case 0: return Integer.class;
-					case 4: return Character.class;
-					case 6: return Double.class;
-					case 7: return Boolean.class;
-					default: return String.class;
-				}
-			}
+				case 0:
+					return Integer.class;
+				case 4:
+					return Character.class;
+				case 6:
+					return Double.class;
+				case 7:
+					return Boolean.class;
+				default:
+					return String.class;
+				}// end switch
+			}// end getColumnClass
 		};
 
 		employeeTable = new JTable(tableModel);
