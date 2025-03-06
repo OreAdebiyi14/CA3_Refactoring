@@ -52,7 +52,7 @@ public class RandomFile {
             if (file != null) {
                 file.close(); // Close the previous file if it's open
             }
-            file = new RandomAccessFile(path, "r"); // Open file in read-write mode
+            file = new RandomAccessFile(path, "rw"); // Open file in read-write mode
             filePath = path;
         } catch (IOException e) {
             e.printStackTrace();
@@ -62,27 +62,35 @@ public class RandomFile {
     public void deleteRecords(long position) {
         try {
             file.seek(position);
-            byte[] emptyData = new byte[RandomAccessEmployeeRecord.SIZE];
-            file.write(emptyData); // ✅ Overwrite with empty bytes
+            file.writeInt(0); // ✅ Mark as deleted by setting Employee ID to 0
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+    
 
     public boolean isSomeoneToDisplay() {
         try {
-            return file.length() > 0;
+            file.seek(0);
+            while (file.getFilePointer() < file.length()) {
+                Employee employee = readRecords(file.getFilePointer());
+                if (employee != null && employee.getEmployeeId() != 0) {
+                    return true; // ✅ At least one valid record exists
+                }
+                file.seek(file.getFilePointer() + RandomAccessEmployeeRecord.SIZE);
+            }
         } catch (IOException e) {
-            return false;
+            e.printStackTrace();
         }
-    }
+        return false;
+    }    
 
     public long getFirst() {
         try {
             file.seek(0);
             while (file.getFilePointer() < file.length()) {
                 Employee employee = readRecords(file.getFilePointer());
-                if (employee.getEmployeeId() != 0) { // ✅ Skip empty records
+                if (employee != null && employee.getEmployeeId() != 0) { // ✅ Skip empty records
                     return file.getFilePointer();
                 }
                 file.seek(file.getFilePointer() + RandomAccessEmployeeRecord.SIZE);
@@ -91,7 +99,7 @@ public class RandomFile {
             e.printStackTrace();
         }
         return -1;
-    }
+    }    
     
     public long getLast() {
         try {
@@ -180,10 +188,22 @@ public class RandomFile {
         return false;
     }
 
-    Employee findEmployeeById(int id) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public Employee findEmployeeById(int id) {
+        try {
+            file.seek(0);
+            while (file.getFilePointer() < file.length()) {
+                Employee employee = readRecords(file.getFilePointer());
+                if (employee != null && employee.getEmployeeId() == id) {
+                    return employee; // Found
+                }
+                file.seek(file.getFilePointer() + RandomAccessEmployeeRecord.SIZE);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null; // Employee not found
     }
-
+    
     public boolean isPpsExist(String pps, long currentByte) {
         try {
             file.seek(0);
@@ -201,14 +221,17 @@ public class RandomFile {
     
     public void createFile(String path) {
         try {
-            file = new RandomAccessFile(path, "rw");
-            filePath = path; // ✅ Store file path
+            if (file != null) {
+                file.close(); // Close the previous file if it's open
+            }
+            file = new RandomAccessFile(path, "rw"); // Open file in read-write mode
+            filePath = path; // Store the path
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
     
-       
+    
     public void changeRecords(Employee employee, long position) {
         try {
             if (position < 0 || position >= file.length()) {

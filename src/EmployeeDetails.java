@@ -49,7 +49,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import net.miginfocom.swing.MigLayout;
 
-public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame implements ActionListener, ItemListener, DocumentListener, WindowListener, EmployeeObserver {
+public class EmployeeDetails<currentEmployee> extends JFrame implements ActionListener, ItemListener, DocumentListener, WindowListener, EmployeeObserver {
 	// decimal format for inactive currency text field
 	private static final DecimalFormat format = new DecimalFormat("\u20ac ###,###,##0.00");
 	// decimal format for active currency text field
@@ -86,7 +86,6 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 	// full time combo box values
 	String[] fullTime = { "", "Yes", "No" };
 	private String filePath;
-
 	private EmployeeController controller = new EmployeeController();
 
 	public void update() {
@@ -373,8 +372,10 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 	// display Employee summary dialog
 	private void displayEmployeeSummaryDialog() {
 		// display Employee summary dialog if these is someone to display
-		if (isSomeoneToDisplay())
-			new EmployeeSummaryDialog(getAllEmployees());
+		if (isSomeoneToDisplay()) {
+			Vector<Vector<Object>> employees = getAllEmployees(); // Ensure correct type
+			new EmployeeSummaryDialog(employees); // Correct constructor
+		}
 	}// end displaySummaryDialog
 
 	// display search by ID dialog
@@ -401,8 +402,10 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 			currentEmployee = application.readRecords(currentByteStart);
 			application.closeReadFile();// close file for reading
 			// if first record is inactive look for next record
-			if (currentEmployee.getEmployeeId() == 0)
-				nextRecord();// look for next record
+			if (currentEmployee != null && currentEmployee.getEmployeeId() == 0) {
+				nextRecord(); // look for next record
+			}
+			// look for next record
 		} // end if
 	}// end firstRecord
 
@@ -508,12 +511,17 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 		int nextFreeId = 0;
 		// if file is empty or all records are empty start with ID 1 else look
 		// for last active record
-		if (file.length() == 0 || !isSomeoneToDisplay())
-			nextFreeId++;
-		else {
-			lastRecord();// look for last active record
-			// add 1 to last active records ID to get next ID
-			nextFreeId = currentEmployee.getEmployeeId() + 1;
+		try {
+			if (file.length() == 0 || !isSomeoneToDisplay())
+				nextFreeId++;
+			else {
+				lastRecord();// look for last active record
+				// add 1 to last active records ID to get next ID
+				nextFreeId = currentEmployee.getEmployeeId() + 1;
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		return nextFreeId;
 	}// end getNextFreeId
@@ -563,11 +571,16 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 	}// end deleteDecord
 
 	// create vector of vectors with all Employee details
-	private Vector<Object> getAllEmployees() {
-		Vector<Object> allEmployees = new Vector<>();
+	private Vector<Vector<Object>> getAllEmployees() {
+		Vector<Vector<Object>> allEmployees = new Vector<>();
 		long byteStart = currentByteStart;
 	
 		firstRecord(); // Move to the first employee record
+
+		if (currentEmployee == null) { // Prevent NullPointerException
+			return allEmployees; // Return empty list if no employees exist
+		}
+
 		int firstId = currentEmployee.getEmployeeId();
 	
 		do {
@@ -583,6 +596,8 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 	
 			allEmployees.add(empDetails);
 			nextRecord(); // Move to the next record
+
+			if (currentEmployee == null) break;
 	
 		} while (firstId != currentEmployee.getEmployeeId()); // Stop when loop completes
 	
@@ -658,7 +673,7 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 	}// end correctPPS
 
 	// check if file name has extension .dat
-	private boolean checkFileName(RandomAccessFile newFile) {
+	private boolean checkFileName(File newFile) {
 			boolean checkFile = false;
 			int length = newFile.toString().length();
 	
@@ -778,41 +793,44 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 	}// end setEnabled
 
 	// open file
-	private void openFile() {
+	private void openFile() throws IOException {
 		final JFileChooser fc = new JFileChooser();
 		fc.setDialogTitle("Open");
-		// display files in File Chooser only with extension .dat
+		// Display files in File Chooser only with extension .dat
 		fc.setFileFilter(datfilter);
-		RandomAccessFile newFile; // holds opened file name and path
-		// if old file is not empty or changes has been made, offer user to save
-		// old file
+		
+		File newFile; // ✅ Declare as File
+		// If old file is not empty or changes have been made, offer the user to save old file
 		if (file.length() != 0 || change) {
 			int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to save changes?", "Save",
 					JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
-			// if user wants to save file, save it
+			// If user wants to save file, save it
 			if (returnVal == JOptionPane.YES_OPTION) {
-				saveFile();// save file
-			} // end if
-		} // end if
-
+				saveFile(); // ✅ Save file
+			}
+		}
+	
 		int returnVal = fc.showOpenDialog(EmployeeDetails.this);
-		// if file been chosen, open it
+		// If file has been chosen, open it
 		if (returnVal == JFileChooser.APPROVE_OPTION) {
-			newFile = fc.getSelectedFile();
-			// if old file wasn't saved and its name is generated file name,
-			// delete this file
-			if (filePath.equals(generatedFileName))
-				if (file.exists()) {
-					file.delete();
-				};// delete file
-			file = newFile;// assign opened file to file
-			// open file for reading
-			application.openReadFile(filePath);
-			firstRecord();// look for first record
+			newFile = fc.getSelectedFile(); // ✅ Correct: now newFile is of type File
+	
+			// If old file wasn't saved and its name is a generated file name, delete this file
+			if (filePath.equals(generatedFileName)) {
+				if (new File(filePath).exists()) {
+					new File(filePath).delete(); // ✅ Delete the old file
+				}
+			}
+	
+			// ✅ Open the selected file as a RandomAccessFile
+			application.openReadFile(newFile.getAbsolutePath()); 
+	
+			firstRecord(); // ✅ Look for the first record
 			displayRecords(currentEmployee);
-			application.closeReadFile();// close file for reading
-		} // end if
-	}// end openFile
+			application.closeReadFile(); // ✅ Close file for reading
+		}
+	}
+	// end openFile
 
 	// save file
 	private void saveFile() {
@@ -869,7 +887,7 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 	// save file as 'save as'
 	private void saveFileAs() {
 		final JFileChooser fc = new JFileChooser();
-		RandomAccessFile newFile;
+		File newFile;
 		String defaultFileName = "new_Employee.dat";
 		fc.setDialogTitle("Save As");
 		// display files only with .dat extension
@@ -885,24 +903,22 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 			if (!checkFileName(newFile)) {
 				// add .dat extension if it was not there
 				newFile = new File(newFile.getAbsolutePath() + ".dat");
-				// create new file
-				application.createFile(newFile.getAbsolutePath());
 			} // end id
-			else
-				// create new file
-				application.createFile(newFile.getAbsolutePath());
+			filePath = newFile.getAbsolutePath();
+			application.createFile(filePath);
 
-			try {// try to copy old file to new file
+			try {
+				// try to copy old file to new file
 				Files.copy(new File(filePath).toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-				// if old file name was generated file name, delete it
-				if (filePath.equals(generatedFileName))
-					if (file.exists()) {
-						file.delete();
-					};// delete file
-				file = newFile;// assign new file to file
-			} // end try
-			catch (IOException e) {
-			} // end catch
+			} catch (IOException ex) {
+			}
+			// if old file name was generated file name, delete it
+			if (filePath.equals(generatedFileName)){
+				if (new File(filePath).exists()) {
+					new File(filePath).delete();
+				}
+			}
+			application.createFile(filePath);// assign new file to file
 		} // end if
 		changesMade = false;
 	}// end saveFileAs
@@ -919,36 +935,40 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 					saveFile();// save file
 					// delete generated file if user saved details to other file
 					if (filePath.equals(generatedFileName))
-						if (file.exists()) {
-							file.delete();
-						};// delete file
+					if (new File(filePath).exists()) {
+						new File(filePath).delete();
+					}
+					// delete file
 					System.exit(0);// exit application
 				} // end if
 					// else exit application
 				else if (returnVal == JOptionPane.NO_OPTION) {
 					// delete generated file if user chooses not to save file
 					if (filePath.equals(generatedFileName))
-						if (file.exists()) {
-							file.delete();
-						}// delete file
+					if (new File(filePath).exists()) {
+						new File(filePath).delete();
+					}
+					// delete file
 					System.exit(0);// exit application
 				} // end else if
 			} // end if
 			else {
 				// delete generated file if user chooses not to save file
 				if (filePath.equals(generatedFileName))
-					if (file.exists()) {
-						file.delete();
-					}// delete file
+				if (new File(filePath).exists()) {
+					new File(filePath).delete();
+				}
+				// delete file
 				System.exit(0);// exit application
 			} // end else
 				// else exit application
 		} else {
 			// delete generated file if user chooses not to save file
 			if (filePath.equals(generatedFileName))
-				if (file.exists()) {
-					file.delete();
-				};// delete file
+			if (new File(filePath).exists()) {
+				new File(filePath).delete();
+			}
+			// delete file
 			System.exit(0);// exit application
 		} // end else
 	}// end exitApp
@@ -971,21 +991,27 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 	private void createRandomFile() {
 		generatedFileName = getFileName() + ".dat";
 		// assign generated file name to file
-		file = new File(generatedFileName);
+		filePath = generatedFileName;
 		// create file
 		application.createFile(filePath);
 	}// end createRandomFile
 
 	// action listener for buttons, text field and menu items
-        @Override
+    @Override
 	public void actionPerformed(ActionEvent e) {
 
 		if (e.getSource() == closeApp) {
 			if (checkInput() && !checkForChanges())
-				exitApp();
+				try {
+                                    exitApp();
+                        } catch (IOException ex) {
+                        }
 		} else if (e.getSource() == open) {
 			if (checkInput() && !checkForChanges())
-				openFile();
+				try {
+                                    openFile();
+                        } catch (IOException ex) {
+                        }
 		} else if (e.getSource() == save) {
 			if (checkInput() && !checkForChanges())
 				saveFile();
@@ -1082,7 +1108,7 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 	// main method
 	public static void main(String args[]) {
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
-                        @Override
+            @Override
 			public void run() {
 				createAndShowGUI();
 			}
@@ -1112,8 +1138,11 @@ public class EmployeeDetails<currentEmployee, RandomFile> extends JFrame impleme
 
 	// WindowsListener methods
 	public void windowClosing(WindowEvent e) {
-		// exit application
-		exitApp();
+            try {
+                // exit application
+                exitApp();
+            } catch (IOException ex) {
+            }
 	}
 
 	public void windowActivated(WindowEvent e) {
