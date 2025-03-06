@@ -4,8 +4,8 @@
  * 
  * */
 
-import java.io.RandomAccessFile;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 
 public class RandomAccessEmployeeRecord extends Employee
 {  
@@ -27,7 +27,7 @@ public class RandomAccessEmployeeRecord extends Employee
    // Read a record from specified RandomAccessFile
    public void read( RandomAccessFile file ) throws IOException
    {
-	   	setEmployeeId(file.readInt());
+	   setEmployeeId(file.readInt());
 		setPps(readName(file));
 		setSurname(readName(file));
 		setFirstName(readName(file));
@@ -78,4 +78,5 @@ public class RandomAccessEmployeeRecord extends Employee
       buffer.setLength( 20 );
       file.writeChars( buffer.toString() );
    } // end writeName
+
 } // end class RandomAccessEmployeeRecord
