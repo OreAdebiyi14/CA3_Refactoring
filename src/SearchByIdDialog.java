@@ -9,7 +9,6 @@ import java.awt.Container;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -27,7 +26,7 @@ public class SearchByIdDialog extends JDialog implements ActionListener {
 	JTextField searchField;
 	// constructor for SearchByIdDialog 
 	public SearchByIdDialog(EmployeeDetails parent) {
-		setTitle("Search by Surname");
+		setTitle("Search by Id");
 		setModal(true);
 		this.parent = parent;
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -70,6 +69,10 @@ public class SearchByIdDialog extends JDialog implements ActionListener {
 
 		return searchPanel;
 	}// end searchPane
+
+	public void update() {
+        // Refresh any search results when notified
+    }
 
 	// action listener for save and cancel button
 	public void actionPerformed(ActionEvent e) {

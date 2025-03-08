@@ -23,6 +23,8 @@ import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.Vector;
 
@@ -87,9 +89,37 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 	String[] fullTime = { "", "Yes", "No" };
 	private String filePath;
 	private EmployeeController controller = new EmployeeController();
+	private static EmployeeDetails instance;
+
+	private List<EmployeeObserver> observers = new ArrayList<>();
+
+
+	private EmployeeDetails() {
+        // Private constructor to prevent instantiation
+    }
+
+	public static EmployeeDetails getInstance() {
+        if (instance == null) {
+            instance = new EmployeeDetails();
+        }
+        return instance;
+    }
+	public EmployeeController getController() {
+		return controller;
+	}
+
+	public void addObserver(EmployeeObserver observer) {
+        observers.add(observer);
+    }
+
+    private void notifyObservers() {
+        for (EmployeeObserver observer : observers) {
+            observer.update();
+        }
+    }
 
 	public void update() {
-        refreshEmployeeList();  // Refresh UI when new employee is added
+        displayRecords(currentEmployee);  // Refresh UI when new employee is added
     }
 
 	public void refreshEmployeeList() {
@@ -236,6 +266,7 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 				if (success) {
 					JOptionPane.showMessageDialog(null, "Employee updated successfully!");
 					displayRecords(currentEmployee);
+					notifyObservers();
 				} else {
 					JOptionPane.showMessageDialog(null, "Failed to update employee.");
 				}
@@ -545,30 +576,22 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 	// add Employee object to fail
 	public void addRecord(Employee newEmployee) {
 		controller.addEmployee(newEmployee);
+		notifyObservers();
 	}
 	// end addRecord
 
 	// delete (make inactive - empty) record from file
-	private void deleteRecord() {
-		if (isSomeoneToDisplay()) {// if any active record in file display
-									// message and delete record
-			int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to delete record?", "Delete",
-					JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
-			// if answer yes delete (make inactive - empty) record
+	public void deleteRecord() {
+		if (isSomeoneToDisplay()) {
+			int returnVal = JOptionPane.showConfirmDialog(frame, "Do you want to delete this record?", "Delete",
+					JOptionPane.YES_NO_OPTION);
 			if (returnVal == JOptionPane.YES_OPTION) {
-				// open file for writing
-				application.openWriteFile(filePath);
-				// delete (make inactive - empty) record in file proper position
-				application.deleteRecords(currentByteStart);
-				application.closeWriteFile();// close file for writing
-				// if any active record in file display next record
-				if (isSomeoneToDisplay()) {
-					nextRecord();// look for next record
-					displayRecords(currentEmployee);
-				} // end if
-			} // end if
-		} // end if
-	}// end deleteDecord
+				controller.deleteEmployee(currentEmployee.getEmployeeId());
+				notifyObservers(); // Refresh UI
+			}
+		}
+	}
+	// end deleteDecord
 
 	// create vector of vectors with all Employee details
 	private Vector<Vector<Object>> getAllEmployees() {

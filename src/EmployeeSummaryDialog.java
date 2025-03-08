@@ -26,27 +26,29 @@
 import net.miginfocom.swing.MigLayout;
  
  
- public class EmployeeSummaryDialog extends JDialog implements ActionListener {
-	 // Vector containing all employee details
+public class EmployeeSummaryDialog extends JDialog implements ActionListener, EmployeeObserver {
+	// Vector containing all employee details
 	 private Vector<Vector<Object>> allEmployees;
 	 private JButton back;
 	 private JTable employeeTable;
 	 private DefaultTableModel tableModel;
 	 
 	 public EmployeeSummaryDialog(Vector<Vector<Object>> allEmployees) {
-		 setTitle("Employee Summary");
-		 setModal(true);
-		 this.allEmployees = allEmployees; // ✅ Ensure allEmployees is correctly assigned
- 
-		 setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
- 
-		 JScrollPane scrollPane = new JScrollPane(summaryPane());
-		 setContentPane(scrollPane);
- 
-		 setSize(850, 500);
-		 setLocation(350, 250);
-		 setVisible(true);
-	 }
+		setTitle("Employee Summary");
+		setModal(true);
+		this.allEmployees = allEmployees; 
+		EmployeeDetails.getInstance().addObserver(this); // Subscribe to updates
+	
+		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+	
+		JScrollPane scrollPane = new JScrollPane(summaryPane());
+		setContentPane(scrollPane);
+	
+		setSize(850, 500);
+		setLocation(350, 250);
+		setVisible(true);
+	}
+	
  
 	 // Initialize container
 	 public Container summaryPane() {
@@ -125,6 +127,17 @@ import net.miginfocom.swing.MigLayout;
 		 }
 	 }
  
+	 @Override
+	 public void update() {
+		 tableModel.setRowCount(0); // Clear existing rows
+		 Vector<Vector<Object>> updatedEmployees = EmployeeDetails.getInstance().getAllEmployees();
+		 for (Vector<Object> emp : updatedEmployees) {
+			 tableModel.addRow(emp);
+		 }
+		 tableModel.fireTableDataChanged(); // Notify the table to refresh
+	 }
+	 
+
 	 // Format for salary column
 	 static class DecimalFormatRenderer extends DefaultTableCellRenderer {
 		 private static final DecimalFormat format = new DecimalFormat("\u20ac ###,###,##0.00");

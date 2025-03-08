@@ -1,5 +1,7 @@
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
+import java.util.List;
 
 //implements searching employees by id
 //reads employee records from the file
@@ -67,7 +69,6 @@ public class RandomFile {
             e.printStackTrace();
         }
     }
-    
 
     public boolean isSomeoneToDisplay() {
         try {
@@ -178,10 +179,23 @@ public class RandomFile {
         return new String(chars).trim();
     }
 
-    public Employee findEmployeeBySurname(String surname) {
-        // TODO: Implement this
-        return null;
+   public List<Employee> findEmployeeBySurname(String surname) {
+    List<Employee> matchingEmployees = new ArrayList<>();
+    try {
+        file.seek(0);
+        while (file.getFilePointer() < file.length()) {
+            Employee employee = readRecords(file.getFilePointer());
+            if (employee != null && employee.getEmployeeId() != 0 &&
+                employee.getSurname().equalsIgnoreCase(surname)) {
+                matchingEmployees.add(employee);
+            }
+            file.seek(file.getFilePointer() + RandomAccessEmployeeRecord.SIZE);
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
     }
+    return matchingEmployees;
+}
 
     public boolean updateEmployeeInFile(Employee updatedEmployee) {
         // TODO: Implement this
@@ -230,8 +244,7 @@ public class RandomFile {
             e.printStackTrace();
         }
     }
-    
-    
+      
     public void changeRecords(Employee employee, long position) {
         try {
             if (position < 0 || position >= file.length()) {
@@ -254,5 +267,28 @@ public class RandomFile {
             e.printStackTrace();
         }
     }
+    
+    public void deleteEmployee(int employeeId) {
+        List<Employee> employees = new ArrayList<>();
+    
+        try {
+            file.seek(0);
+            while (file.getFilePointer() < file.length()) {
+                Employee employee = readRecords(file.getFilePointer());
+                if (employee.getEmployeeId() != employeeId) { // Keep only non-deleted employees
+                    employees.add(employee);
+                }
+                file.seek(file.getFilePointer() + RandomAccessEmployeeRecord.SIZE);
+            }
+    
+            file.setLength(0); // Clear the file
+            for (Employee emp : employees) {
+                changeRecords(emp, file.getFilePointer()); // Write back valid employees
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
     
 }

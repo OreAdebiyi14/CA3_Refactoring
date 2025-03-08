@@ -8,12 +8,14 @@ import java.awt.Container;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -71,15 +73,17 @@ public class SearchBySurnameDialog extends JDialog implements ActionListener{
 
 	// action listener for save and cancel button
 	public void actionPerformed(ActionEvent e) {
-		// if option search, search for Employee
-		if(e.getSource() == search){
-			this.parent.searchBySurnameField.setText(searchField.getText());
-			// search Employee by surname
-			this.parent.searchEmployeeBySurname();
-			dispose();// dispose dialog
-		}// end if
-		// else dispose dialog
-		else if(e.getSource() == cancel)
-			dispose();// dispose dialog
-	}// end actionPerformed
+		if (e.getSource() == search) {
+			List<Employee> employees = parent.getController().searchEmployeeBySurname(searchField.getText());
+			if (employees.isEmpty()) {
+				JOptionPane.showMessageDialog(this, "No employees found with that surname.");
+			} else {
+				new EmployeeSummaryDialog(employees);
+			}
+			dispose();
+		} else if (e.getSource() == cancel) {
+			dispose();
+		}
+	}
+// end actionPerformed
 }// end class SearchBySurnameDialog

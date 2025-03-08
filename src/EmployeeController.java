@@ -1,3 +1,5 @@
+import java.util.List;
+
 public class EmployeeController {
     private RandomFile fileHandler;
 
@@ -9,7 +11,7 @@ public class EmployeeController {
         return fileHandler.findEmployeeById(id);
     }
 
-    public Employee searchEmployeeBySurname(String surname) {
+    public List<Employee> searchEmployeeBySurname(String surname) {
         return fileHandler.findEmployeeBySurname(surname);
     }
 
@@ -21,9 +23,10 @@ public class EmployeeController {
         // insert newEmployee into storage (file, database, etc.)
         System.out.println("Employee added: " + newEmployee.getEmployeeId());
     }
-    
-    public void openFile(String path) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'openFile'");
+
+    public void deleteEmployee(int id) {
+        fileHandler.deleteEmployee(id);
     }
+    
+    
 }
