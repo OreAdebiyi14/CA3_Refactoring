@@ -90,16 +90,16 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 	private String filePath;
 	private EmployeeController controller = new EmployeeController();
 	private static EmployeeDetails instance;
-
-	private List<EmployeeObserver> observers = new ArrayList<>();
-
-
-	private EmployeeDetails() {
-        // Private constructor to prevent instantiation
-    }
-
-	public static EmployeeDetails getInstance() {
-        if (instance == null) {
+	
+		private List<EmployeeObserver> observers = new ArrayList<>();
+	
+	
+		private EmployeeDetails() {
+			// Private constructor to prevent instantiation
+		}
+	
+		public static EmployeeDetails getInstance() {
+			if (instance == null) {
             instance = new EmployeeDetails();
         }
         return instance;
@@ -594,7 +594,7 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 	// end deleteDecord
 
 	// create vector of vectors with all Employee details
-	private Vector<Vector<Object>> getAllEmployees() {
+	public Vector<Vector<Object>> getAllEmployees() {
 		Vector<Vector<Object>> allEmployees = new Vector<>();
 		long byteStart = currentByteStart;
 	

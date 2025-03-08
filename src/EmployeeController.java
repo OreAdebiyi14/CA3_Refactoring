@@ -27,6 +27,11 @@ public class EmployeeController {
     public void deleteEmployee(int id) {
         fileHandler.deleteEmployee(id);
     }
+
+    public void openFile(String path) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'openFile'");
+    }
     
     
 }

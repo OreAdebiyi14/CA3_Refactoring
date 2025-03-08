@@ -77,16 +77,21 @@ public class EmployeeSummaryDialog extends JDialog implements ActionListener, Em
  
 		 // ✅ Correct table model with proper vector types
 		 tableModel = new DefaultTableModel(allEmployees, header) {
-			 @Override
-			 public Class<?> getColumnClass(int columnIndex) {
-				 switch (columnIndex) {
-					 case 0: return Integer.class;
-					 case 4: return Character.class;
-					 case 6: return Double.class;
-					 case 7: return Boolean.class;
-					 default: return String.class;
-				 }
-			 }
+			@Override
+			public boolean isCellEditable(int row, int column) {
+				return false;
+			}
+
+			@Override
+			public Class<?> getColumnClass(int columnIndex) {
+				switch (columnIndex) {
+					case 0: return Integer.class;
+					case 4: return Character.class;
+					case 6: return Double.class;
+					case 7: return Boolean.class;
+					default: return String.class;
+				}
+			}
 		 };
  
 		 // Create table
@@ -127,7 +132,8 @@ public class EmployeeSummaryDialog extends JDialog implements ActionListener, Em
 		 }
 	 }
  
-	 @Override
+	@SuppressWarnings("unchecked")
+	@Override
 	 public void update() {
 		 tableModel.setRowCount(0); // Clear existing rows
 		 Vector<Vector<Object>> updatedEmployees = EmployeeDetails.getInstance().getAllEmployees();
