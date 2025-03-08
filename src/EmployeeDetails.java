@@ -19,6 +19,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -53,7 +54,8 @@ import net.miginfocom.swing.MigLayout;
 
 public class EmployeeDetails<currentEmployee> extends JFrame implements ActionListener, ItemListener, DocumentListener, WindowListener, EmployeeObserver {
 	// decimal format for inactive currency text field
-	private static final DecimalFormat format = new DecimalFormat("\u20ac ###,###,##0.00");
+	private static final DecimalFormat format = new DecimalFormat("###,###,##0.00"); //  No €
+
 	// decimal format for active currency text field
 	private static final DecimalFormat fieldFormat = new DecimalFormat("0.00");
 	// hold object start position in file
@@ -100,27 +102,27 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 	
 		public static EmployeeDetails getInstance() {
 			if (instance == null) {
-            instance = new EmployeeDetails();
-        }
-        return instance;
-    }
+			instance = new EmployeeDetails();
+		}
+		return instance;
+	}
 	public EmployeeController getController() {
 		return controller;
 	}
 
 	public void addObserver(EmployeeObserver observer) {
-        observers.add(observer);
-    }
+		observers.add(observer);
+	}
 
-    private void notifyObservers() {
-        for (EmployeeObserver observer : observers) {
-            observer.update();
-        }
-    }
+	private void notifyObservers() {
+		for (EmployeeObserver observer : observers) {
+			observer.update();
+		}
+	}
 
 	public void update() {
-        displayRecords(currentEmployee);  // Refresh UI when new employee is added
-    }
+		displayRecords(currentEmployee);  // Refresh UI when new employee is added
+	}
 
 	public void refreshEmployeeList() {
 		System.out.println("Refreshing Employee List...");
@@ -390,7 +392,7 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 			firstNameField.setText(thisEmployee.getFirstName());
 			genderCombo.setSelectedIndex(countGender);
 			departmentCombo.setSelectedIndex(countDep);
-			salaryField.setText(format.format(thisEmployee.getSalary()));
+			salaryField.setText(String.valueOf((int) thisEmployee.getSalary()));
 			// set corresponding full time combo box value to current employee
 			if (thisEmployee.getFullTime() == true)
 				fullTimeCombo.setSelectedIndex(1);
@@ -402,24 +404,36 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 
 	// display Employee summary dialog
 	private void displayEmployeeSummaryDialog() {
-		// display Employee summary dialog if these is someone to display
-		if (isSomeoneToDisplay()) {
-			Vector<Vector<Object>> employees = getAllEmployees(); // Ensure correct type
-			new EmployeeSummaryDialog(employees); // Correct constructor
+		Vector<Vector<Object>> employees = getAllEmployees(); // ✅ Get employee data safely
+	
+		if (employees.isEmpty()) {
+			JOptionPane.showMessageDialog(null, "No employees found!", "Info", JOptionPane.INFORMATION_MESSAGE);
+			return;
 		}
-	}// end displaySummaryDialog
+
+		EmployeeSummaryDialog dialog = new EmployeeSummaryDialog(employees);
+
+		dialog.setVisible(true);
+	
+	}
+	// end displaySummaryDialog
 
 	// display search by ID dialog
 	private void displaySearchByIdDialog() {
-		if (isSomeoneToDisplay())
-			new SearchByIdDialog(EmployeeDetails.this);
-	}// end displaySearchByIdDialog
+		if (isSomeoneToDisplay()) {
+			SearchByIdDialog dialog = new SearchByIdDialog(EmployeeDetails.this); // ✅ Store instance
+			dialog.setVisible(true);
+		}
+	}
+	// end displaySearchByIdDialog
 
 	// display search by surname dialog
 	private void displaySearchBySurnameDialog() {
-		if (isSomeoneToDisplay())
-			new SearchBySurnameDialog(EmployeeDetails.this);
-	}// end displaySearchBySurnameDialog
+		if (isSomeoneToDisplay()) {
+			SearchBySurnameDialog dialog = new SearchBySurnameDialog(EmployeeDetails.this); // ✅ Store instance
+			dialog.setVisible(true);// Ensure the dialog is displayed
+		}
+	} //end displaySearchBySurnameDialog
 
 	// find byte start in file for first active record
 	private void firstRecord() {
@@ -560,34 +574,43 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 
 	// get next free ID from Employees in the file
 	public int getNextFreeId() {
-		if (filePath == null || filePath.isEmpty()) {
-			filePath = "employees.dat"; 
+		if (file == null) { // If file isn't open, open it
+			try {
+				file = new RandomAccessFile("employees.dat", "rw");
+			} catch (FileNotFoundException e) {
+				
+				e.printStackTrace();
+			} // Default file
 		}
-		application.openReadFile(filePath);
-		int nextFreeId = 1;
-		// if file is empty or all records are empty start with ID 1 else look
-		// for last active record
+	
 		try {
-			if (file.length() == 0 || !isSomeoneToDisplay())
-				return nextFreeId;
-			else {
-				lastRecord();// look for last active record
-				// add 1 to last active records ID to get next ID
-				nextFreeId = currentEmployee.getEmployeeId() + 1;
+			if (file.length() == 0 || !isSomeoneToDisplay()) {
+				return 1;
+			} else {
+				lastRecord();
+				return currentEmployee.getEmployeeId() + 1;
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
+			return 1; // Default to 1 if error occurs
 		}
-		return nextFreeId;
-	}// end getNextFreeId
+	}
+	// end getNextFreeId
 
 	// get values from text fields and create Employee object
 	private Employee getChangedDetails() {
+		String idText = idField.getText().trim();
 		
-	boolean fullTime = fullTimeCombo.getSelectedItem().toString().equalsIgnoreCase("Yes");
-
+		if (idText.isEmpty()) { // Prevent empty ID error
+			System.out.println("Error: ID field is empty!");
+			JOptionPane.showMessageDialog(null, "Error: Employee ID is missing!");
+			return null; // Prevents further execution
+		}
+	
+		boolean fullTime = fullTimeCombo.getSelectedItem().toString().equalsIgnoreCase("Yes");
+	
 		return new Employee(
-			Integer.parseInt(idField.getText()),
+			Integer.parseInt(idText),  
 			ppsField.getText().toUpperCase(),
 			surnameField.getText().toUpperCase(),
 			firstNameField.getText().toUpperCase(),
@@ -596,7 +619,8 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 			Double.parseDouble(salaryField.getText()),
 			fullTime
 		);
-	}// end getChangedDetails
+	}
+	// end getChangedDetails
 
 	// add Employee object to fail
 	public void addRecord(Employee newEmployee) {
@@ -624,48 +648,58 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 	// create vector of vectors with all Employee details
 	public Vector<Vector<Object>> getAllEmployees() {
 		Vector<Vector<Object>> allEmployees = new Vector<>();
-		long byteStart = currentByteStart;
 	
-		firstRecord(); // Move to the first employee record
-
-		if (currentEmployee == null) { // Prevent NullPointerException
-			return allEmployees; // Return empty list if no employees exist
+		try {
+			application.openReadFile(filePath); // ✅ Ensure file is open
+	
+			if (!isSomeoneToDisplay()) { 
+				System.out.println("DEBUG: No employees found in the file.");
+				JOptionPane.showMessageDialog(null, "No Employees registered!", "Error", JOptionPane.ERROR_MESSAGE);
+				return allEmployees;
+			}
+	
+			long byteStart = application.getFirst(); // ✅ Get first employee
+			while (byteStart != -1) {
+				System.out.println("DEBUG: Reading Employee at position " + byteStart);
+	
+				Employee currentEmployee = application.readRecords(byteStart);
+	
+				if (currentEmployee != null && currentEmployee.getEmployeeId() != 0) {
+					Vector<Object> empDetails = new Vector<>();
+					empDetails.add(currentEmployee.getEmployeeId());
+					empDetails.add(currentEmployee.getPps());
+					empDetails.add(currentEmployee.getSurname());
+					empDetails.add(currentEmployee.getFirstName());
+					empDetails.add(currentEmployee.getGender());
+					empDetails.add(currentEmployee.getDepartment());
+					empDetails.add(currentEmployee.getSalary());
+					empDetails.add(currentEmployee.getFullTime());
+					allEmployees.add(empDetails);
+				}
+	
+				byteStart = application.getNext(byteStart); // ✅ Move to next employee
+			}
+	
+			application.closeReadFile(); // ✅ Close file after reading
+		} catch (Exception e) {
+			e.printStackTrace();
+			JOptionPane.showMessageDialog(null, "Error loading employees!", "Error", JOptionPane.ERROR_MESSAGE);
 		}
-
-		int firstId = currentEmployee.getEmployeeId();
 	
-		do {
-			Vector<Object> empDetails = new Vector<>();
-			empDetails.add(currentEmployee.getEmployeeId());
-			empDetails.add(currentEmployee.getPps());
-			empDetails.add(currentEmployee.getSurname());
-			empDetails.add(currentEmployee.getFirstName());
-			empDetails.add(currentEmployee.getGender());
-			empDetails.add(currentEmployee.getDepartment());
-			empDetails.add(currentEmployee.getSalary());
-			empDetails.add(currentEmployee.getFullTime());
-	
-			allEmployees.add(empDetails);
-			nextRecord(); // Move to the next record
-
-			if (currentEmployee == null) break;
-	
-		} while (firstId != currentEmployee.getEmployeeId()); // Stop when loop completes
-	
-		currentByteStart = byteStart;
 		return allEmployees;
 	}
+	
 	// end getAllEmployees
 
 	// activate field for editing
 	private void editDetails() {
 		// activate field for editing if there is records to display
 		if (isSomeoneToDisplay()) {
-			// remove euro sign from salary text field
-			salaryField.setText(fieldFormat.format(currentEmployee.getSalary()));
+			salaryField.setText(String.valueOf((int)currentEmployee.getSalary())); // 
 			change = false;
-			setEnabled(true);// enable text fields for editing
-		} // end if
+			setEnabled(true); // enable text fields for editing
+		}
+		 // end if
 	}// end editDetails
 
 	// ignore changes and set text field unenabled
@@ -917,13 +951,22 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 	}// end saveFile
 
 	// save changes to current Employee
-	private void saveChanges() {
+	public void saveChanges() {
 		int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to save changes?", "Save",
 				JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
 	
 		if (returnVal == JOptionPane.YES_OPTION) {
 			Employee updatedEmployee = getChangedDetails();
 			if (updatedEmployee == null) return; // Prevent saving if invalid data
+	
+			System.out.println("DEBUG: Attempting to update Employee ID " + updatedEmployee.getEmployeeId());
+	
+			Employee existingEmployee = controller.searchEmployeeById(updatedEmployee.getEmployeeId());
+			if (existingEmployee == null) {
+				System.out.println("DEBUG: Employee ID " + updatedEmployee.getEmployeeId() + " not found!");
+				JOptionPane.showMessageDialog(null, "Error: Employee not found!", "Update Error", JOptionPane.ERROR_MESSAGE);
+				return;
+			}
 	
 			boolean success = application.updateEmployeeInFile(updatedEmployee);
 			if (success) {
@@ -935,6 +978,7 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 			}
 		}
 	}
+	
 	// end saveChanges
 
 	// save file as 'save as'

@@ -1,3 +1,4 @@
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
@@ -10,6 +11,9 @@ public class RandomFile {
     private static RandomFile instance;
     private RandomAccessFile file;
     private String filePath;
+    private RandomAccessFile readFile;
+    private RandomAccessFile writeFile;
+
 
     //singleton pattern
     private RandomFile() {}
@@ -23,43 +27,67 @@ public class RandomFile {
     
     public void closeReadFile() {
         try {
-            if (file != null) file.close();
+            if (readFile != null) {
+                readFile.close();
+                readFile = null;
+                System.out.println("DEBUG: Read file closed.");
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-    
+
     public void closeWriteFile() {
         try {
-            if (file != null) file.close();
+            if (writeFile != null) {
+                writeFile.close();
+                writeFile = null;
+                System.out.println("DEBUG: Write file closed.");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void openReadFile(String path) {
+        try {
+            if (readFile != null && filePath.equals(path)) { 
+                System.out.println("DEBUG: Read file is already open: " + path);
+                return;  // ✅ Don't reopen if it's already open
+            }
+    
+            if (readFile != null) {
+                readFile.close(); // ✅ Close only if it's a different file
+            }
+    
+            readFile = new RandomAccessFile(path, "r"); // ✅ Open in read-only mode
+            filePath = path;
+            System.out.println("DEBUG: Opened file for reading: " + path);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
     
-    public void openReadFile(String path) {
-        try {
-            if (file != null) {
-                file.close();
-            }
-            file = new RandomAccessFile(path, "rw");
-            filePath = path; // ✅ Store the path
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }    
-
     public void openWriteFile(String path) {
         try {
-            if (file != null) {
-                file.close(); // Close the previous file if it's open
+            if (writeFile != null && filePath.equals(path)) { 
+                System.out.println("DEBUG: File is already open for writing: " + path);
+                return;  // ✅ Don't reopen if already correct
             }
-            file = new RandomAccessFile(path, "rw"); // Open file in read-write mode
+    
+            if (writeFile != null) {
+                writeFile.close(); // ✅ Close only if it's a different file
+            }
+    
+            writeFile = new RandomAccessFile(path, "rw"); // ✅ Open in read-write mode
             filePath = path;
+            System.out.println("DEBUG: Opened file for writing: " + path);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+    
+    
 
     public void deleteRecords(long position) {
         try {
@@ -88,23 +116,31 @@ public class RandomFile {
 
     public long getFirst() {
         try {
-            file.seek(0);
-            while (file.getFilePointer() < file.length()) {
-                Employee employee = readRecords(file.getFilePointer());
+            if (readFile == null) {  // Ensure file is open before reading
+                System.out.println("DEBUG: Read file is null! Reopening...");
+                openReadFile(filePath);
+            }
+    
+            readFile.seek(0); // Start at the beginning of the file
+    
+            while (readFile.getFilePointer() < readFile.length()) {
+                Employee employee = readRecords(readFile.getFilePointer());
                 if (employee != null && employee.getEmployeeId() != 0) { // ✅ Skip empty records
-                    return file.getFilePointer();
+                    return readFile.getFilePointer();
                 }
-                file.seek(file.getFilePointer() + RandomAccessEmployeeRecord.SIZE);
+                readFile.seek(readFile.getFilePointer() + RandomAccessEmployeeRecord.SIZE);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return -1;
-    }    
+    
+        System.out.println("DEBUG: No employees found.");
+        return -1; // Return -1 if no valid records exist
+    }
     
     public long getLast() {
         try {
-            long position = file.length() - RandomAccessEmployeeRecord.SIZE;
+            long position = readFile.length() - RandomAccessEmployeeRecord.SIZE;
             while (position >= 0) {
                 Employee employee = readRecords(position);
                 if (employee.getEmployeeId() != 0) {
@@ -121,18 +157,21 @@ public class RandomFile {
     public long getNext(long position) {
         try {
             position += RandomAccessEmployeeRecord.SIZE;
-            while (position < file.length()) {
+            while (position < readFile.length()) {  // Ensure we don’t go past EOF
                 Employee employee = readRecords(position);
-                if (employee.getEmployeeId() != 0) {
+                if (employee != null && employee.getEmployeeId() != 0) {
                     return position;
                 }
                 position += RandomAccessEmployeeRecord.SIZE;
             }
+        } catch (EOFException e) {
+            System.out.println("DEBUG: End of file reached in getNext()");
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return -1; // ✅ No next valid record found
+        return -1;  // Return -1 if no valid record is found
     }
+    
     
     public long getPrevious(long position) {
         position -= RandomAccessEmployeeRecord.SIZE;
@@ -148,13 +187,26 @@ public class RandomFile {
      
     public Employee readRecords(long position) {
         try {
-            file.seek(position);
+            if (readFile == null) {  // ✅ Ensure file is open before reading
+                System.out.println("DEBUG: Read file is null! Reopening...");
+                openReadFile(filePath);
+            }
+    
+            if (position >= readFile.length()) {  // ✅ Prevent EOF errors
+                System.out.println("DEBUG: Reached EOF. No more records.");
+                return null;
+            }
+    
+            readFile.seek(position);  
             RandomAccessEmployeeRecord record = new RandomAccessEmployeeRecord();
-            record.read(file);
+            record.read(readFile);
             return record;
+        } catch (EOFException e) {
+            System.out.println("DEBUG: End of file reached. Returning null.");
+            return null;  // ✅ Prevents crashes
         } catch (IOException e) {
             e.printStackTrace();
-            return new Employee();
+            return new Employee(); // Return an empty employee if an error occurs
         }
     }
     
@@ -182,14 +234,14 @@ public class RandomFile {
    public List<Employee> findEmployeeBySurname(String surname) {
     List<Employee> matchingEmployees = new ArrayList<>();
     try {
-        file.seek(0);
-        while (file.getFilePointer() < file.length()) {
-            Employee employee = readRecords(file.getFilePointer());
+        readFile.seek(0);
+        while (readFile.getFilePointer() < readFile.length()) {
+            Employee employee = readRecords(readFile.getFilePointer());
             if (employee != null && employee.getEmployeeId() != 0 &&
                 employee.getSurname().equalsIgnoreCase(surname)) {
                 matchingEmployees.add(employee);
             }
-            file.seek(file.getFilePointer() + RandomAccessEmployeeRecord.SIZE);
+            readFile.seek(readFile.getFilePointer() + RandomAccessEmployeeRecord.SIZE);
         }
     } catch (IOException e) {
         e.printStackTrace();
@@ -199,14 +251,19 @@ public class RandomFile {
 
 public boolean updateEmployeeInFile(Employee updatedEmployee) {
     try {
-        file.seek(0); // Start from the beginning of the file
+        if (writeFile == null) {  // 🔹 Ensure file is open before updating
+            System.out.println("DEBUG: File is closed! Reopening...");
+            openWriteFile(filePath);
+        }
 
-        while (file.getFilePointer() < file.length()) {
-            long position = file.getFilePointer(); // Store current position
-            Employee employee = readRecords(position); // Read the current record
+        writeFile.seek(0); // Start from the beginning
 
-            if (employee.getEmployeeId() == updatedEmployee.getEmployeeId()) { // Match found
-                file.seek(position); // Move back to the correct position
+        while (writeFile.getFilePointer() < writeFile.length()) {
+            long position = writeFile.getFilePointer();
+            Employee employee = readRecords(position);
+
+            if (employee.getEmployeeId() == updatedEmployee.getEmployeeId()) {
+                writeFile.seek(position);
 
                 RandomAccessEmployeeRecord record = new RandomAccessEmployeeRecord(
                     updatedEmployee.getEmployeeId(),
@@ -219,44 +276,57 @@ public boolean updateEmployeeInFile(Employee updatedEmployee) {
                     updatedEmployee.getFullTime()
                 );
 
-                record.write(file); // Overwrite the existing record
-                file.getFD().sync(); // Ensure the data is written immediately
-                System.out.println("Employee updated successfully: " + updatedEmployee); 
+                record.write(writeFile);
+                writeFile.getFD().sync();  //  Ensure immediate write
+
+                System.out.println("DEBUG: Employee updated successfully -> " + updatedEmployee);
                 return true;
             }
         }
     } catch (IOException e) {
         e.printStackTrace();
     }
-    System.out.println("Employee not found for update: " + updatedEmployee.getEmployeeId()); 
-    return false; // Employee ID not found
+    
+    System.out.println("DEBUG: Employee not found for update -> " + updatedEmployee.getEmployeeId());
+    return false;
 }
 
-
-    public Employee findEmployeeById(int id) {
-        try {
-            file.seek(0);
-            while (file.getFilePointer() < file.length()) {
-                Employee employee = readRecords(file.getFilePointer());
-                if (employee != null && employee.getEmployeeId() == id) {
-                    return employee; // Found
-                }
-                file.seek(file.getFilePointer() + RandomAccessEmployeeRecord.SIZE);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+public Employee findEmployeeById(int id) {
+    try {
+        if (readFile == null) {  
+            System.out.println("DEBUG: Read file is null! Reopening...");
+            openReadFile(filePath);
         }
-        return null; // Employee not found
+
+        readFile.seek(0);  // ✅ Reset pointer to start
+        System.out.println("DEBUG: Searching for Employee ID " + id);
+
+        while (readFile.getFilePointer() < readFile.length()) {
+            long position = readFile.getFilePointer();
+            Employee employee = readRecords(position);
+
+            if (employee != null && employee.getEmployeeId() == id) {
+                System.out.println("DEBUG: Employee found at position " + position + " -> " + employee);
+                return employee;
+            }
+            readFile.seek(position + RandomAccessEmployeeRecord.SIZE);
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
     }
-    
+
+    System.out.println("DEBUG: Employee ID " + id + " not found!");
+    return null;
+}
+   
     public boolean isPpsExist(String pps, long currentByte) {
         try {
-            file.seek(0);
-            while (file.getFilePointer() < file.length()) {
-                long position = file.getFilePointer(); // Save position before reading
+            readFile.seek(0);
+            while (readFile.getFilePointer() < readFile.length()) {
+                long position = readFile.getFilePointer(); // Save position before reading
                 Employee e = readRecords(position); // Read the employee
                 if (e.getPps().equals(pps)) return true;
-                file.seek(position + RandomAccessEmployeeRecord.SIZE); // Move to next record manually
+                readFile.seek(position + RandomAccessEmployeeRecord.SIZE); // Move to next record manually
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -303,19 +373,27 @@ public boolean updateEmployeeInFile(Employee updatedEmployee) {
         List<Employee> employees = new ArrayList<>();
     
         try {
-            file.seek(0);
-            while (file.getFilePointer() < file.length()) {
-                Employee employee = readRecords(file.getFilePointer());
-                if (employee.getEmployeeId() != employeeId) { // Keep only non-deleted employees
-                    employees.add(employee);
-                }
-                file.seek(file.getFilePointer() + RandomAccessEmployeeRecord.SIZE);
+            if (writeFile == null) {  // ✅ Ensure file is open before deleting
+                System.out.println("DEBUG: Write file is null! Reopening...");
+                openWriteFile(filePath);
             }
     
-            file.setLength(0); // Clear the file
-            for (Employee emp : employees) {
-                changeRecords(emp, file.getFilePointer()); // Write back valid employees
+            writeFile.seek(0);  // ✅ Start from beginning
+    
+            while (writeFile.getFilePointer() < writeFile.length()) {
+                Employee employee = readRecords(writeFile.getFilePointer());
+                if (employee.getEmployeeId() != employeeId) { // ✅ Keep only non-deleted employees
+                    employees.add(employee);
+                }
+                writeFile.seek(writeFile.getFilePointer() + RandomAccessEmployeeRecord.SIZE);
             }
+    
+            writeFile.setLength(0); // ✅ Clear the file
+            for (Employee emp : employees) {
+                changeRecords(emp, writeFile.getFilePointer()); // ✅ Write back valid employees
+            }
+    
+            System.out.println("DEBUG: Employee ID " + employeeId + " deleted successfully.");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -323,23 +401,32 @@ public boolean updateEmployeeInFile(Employee updatedEmployee) {
     
     public void addEmployee(Employee newEmployee) {
         try {
-            if (file == null) {
-                System.out.println("Error: File is not open!");
+            if (writeFile == null) {
+                System.out.println("DEBUG: Write file is null! Reopening...");
                 openWriteFile(filePath);
             }
     
-            file.seek(file.length()); // Move to the end of the file
+            long writePosition = writeFile.length();  // ✅ Ensure writing at the correct position
+            writeFile.seek(writePosition); // ✅ Move to the end of the file
+    
+            System.out.println("DEBUG: Writing Employee at position: " + writePosition);
+            
             RandomAccessEmployeeRecord record = new RandomAccessEmployeeRecord(
                 newEmployee.getEmployeeId(), newEmployee.getPps(), newEmployee.getSurname(),
                 newEmployee.getFirstName(), newEmployee.getGender(), newEmployee.getDepartment(),
                 newEmployee.getSalary(), newEmployee.getFullTime()
             );
-            record.write(file);
-            file.getFD().sync(); // Ensure data is written
-            System.out.println("Employee added to file: " + newEmployee); // ✅ Debugging
+    
+            record.write(writeFile);
+            writeFile.getFD().sync(); // ✅ Ensure data is saved immediately
+            writeFile.close(); // ✅ Close file after writing to prevent corruption
+            writeFile = null; // Reset writeFile
+    
+            System.out.println("DEBUG: Employee added successfully at position " + writePosition);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+    
     
 }
