@@ -9,7 +9,7 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
-
+import java.util.Vector;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -75,10 +75,25 @@ public class SearchBySurnameDialog extends JDialog implements ActionListener{
 	public void actionPerformed(ActionEvent e) {
 		if (e.getSource() == search) {
 			List<Employee> employees = parent.getController().searchEmployeeBySurname(searchField.getText());
+			Vector<Vector<Object>> employeeData = new Vector<>();
+
 			if (employees.isEmpty()) {
 				JOptionPane.showMessageDialog(this, "No employees found with that surname.");
+				
+				for (Employee emp : employees) {
+					Vector<Object> row = new Vector<>();
+					row.add(emp.getEmployeeId());
+					row.add(emp.getPps());
+					row.add(emp.getSurname());
+					row.add(emp.getFirstName());
+					row.add(emp.getGender());
+					row.add(emp.getDepartment());
+					row.add(emp.getSalary());
+					row.add(emp.getFullTime());
+					employeeData.add(row);
+    				}	
 			} else {
-				new EmployeeSummaryDialog(employees);
+				new EmployeeSummaryDialog(employeeData);
 			}
 			dispose();
 		} else if (e.getSource() == cancel) {

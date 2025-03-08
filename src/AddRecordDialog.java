@@ -27,12 +27,13 @@ public class AddRecordDialog extends JDialog implements ActionListener {
 	JComboBox<String> genderCombo, departmentCombo, fullTimeCombo;
 	JButton save, cancel;
 	EmployeeDetails parent;
+
 	// constructor for add record dialog
 	public AddRecordDialog(EmployeeDetails parent) {
 		setTitle("Add Record");
 		setModal(true);
 		this.parent = parent;
-		this.parent.setEnabled(false);
+		this.parent.setEnabled(true);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		
 		JScrollPane scrollPane = new JScrollPane(dialogPane());
@@ -57,32 +58,39 @@ public class AddRecordDialog extends JDialog implements ActionListener {
 		empDetails.add(new JLabel("ID:"), "growx, pushx");
 		empDetails.add(idField = new JTextField(20), "growx, pushx, wrap");
 		idField.setEditable(false);
-		
 
 		empDetails.add(new JLabel("PPS Number:"), "growx, pushx");
 		empDetails.add(ppsField = new JTextField(20), "growx, pushx, wrap");
+		ppsField.setEditable(true);
 
 		empDetails.add(new JLabel("Surname:"), "growx, pushx");
 		empDetails.add(surnameField = new JTextField(20), "growx, pushx, wrap");
+		surnameField.setEditable(true);
 
 		empDetails.add(new JLabel("First Name:"), "growx, pushx");
 		empDetails.add(firstNameField = new JTextField(20), "growx, pushx, wrap");
+		firstNameField.setEditable(true);
 
 		empDetails.add(new JLabel("Gender:"), "growx, pushx");
-		empDetails.add(genderCombo = new JComboBox<String>(this.parent.gender), "growx, pushx, wrap");
+		empDetails.add(genderCombo = new JComboBox<>(this.parent.gender), "growx, pushx, wrap");
+		genderCombo.setEnabled(true);
 
 		empDetails.add(new JLabel("Department:"), "growx, pushx");
-		empDetails.add(departmentCombo = new JComboBox<String>(this.parent.department), "growx, pushx, wrap");
+		empDetails.add(departmentCombo = new JComboBox<>(this.parent.department), "growx, pushx, wrap");
+		departmentCombo.setEnabled(true);
 
 		empDetails.add(new JLabel("Salary:"), "growx, pushx");
 		empDetails.add(salaryField = new JTextField(20), "growx, pushx, wrap");
+		salaryField.setEditable(true);
 
 		empDetails.add(new JLabel("Full Time:"), "growx, pushx");
-		empDetails.add(fullTimeCombo = new JComboBox<String>(this.parent.fullTime), "growx, pushx, wrap");
+		empDetails.add(fullTimeCombo = new JComboBox<>(this.parent.fullTime), "growx, pushx, wrap");
+		fullTimeCombo.setEnabled(true);
 
 		buttonPanel.add(save = new JButton("Save"));
 		save.addActionListener(this);
 		save.requestFocus();
+
 		buttonPanel.add(cancel = new JButton("Cancel"));
 		cancel.addActionListener(this);
 
@@ -107,7 +115,8 @@ public class AddRecordDialog extends JDialog implements ActionListener {
 
 	// add record to file
 	public void addRecord() {
-		boolean fullTime = false;
+		boolean fullTime = fullTimeCombo.getSelectedItem().toString().equalsIgnoreCase("Yes");
+
 		Employee theEmployee;
 
 		theEmployee = EmployeeFactory.createEmployee(
@@ -120,6 +129,9 @@ public class AddRecordDialog extends JDialog implements ActionListener {
 			Double.parseDouble(salaryField.getText()), 
 			fullTime
 		);
+
+		JOptionPane.showMessageDialog(null, "DEBUG: Saving employee: " + theEmployee);
+
 		this.parent.currentEmployee = theEmployee;
 		this.parent.addRecord(theEmployee);
 		this.parent.displayRecords(theEmployee);

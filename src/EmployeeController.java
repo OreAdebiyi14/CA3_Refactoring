@@ -21,7 +21,7 @@ public class EmployeeController {
 
     public void addEmployee(Employee newEmployee) {
         // insert newEmployee into storage (file, database, etc.)
-        System.out.println("Employee added: " + newEmployee.getEmployeeId());
+        fileHandler.addEmployee(newEmployee);
     }
 
     public void deleteEmployee(int id) {
@@ -29,9 +29,19 @@ public class EmployeeController {
     }
 
     public void openFile(String path) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'openFile'");
+        if (path == null || path.isEmpty()) {
+            System.out.println("Error: File path is empty!");
+            return;
+        }
+    
+        try {
+            RandomFile.getInstance().openWriteFile(path); // Open the file for reading and writing
+            System.out.println("File opened successfully: " + path); 
+        } catch (Exception e) {
+            System.out.println("Error opening file: " + e.getMessage());
+        }
     }
+    
     
     
 }

@@ -42,7 +42,7 @@ public class RandomFile {
             if (file != null) {
                 file.close();
             }
-            file = new RandomAccessFile(path, "r");
+            file = new RandomAccessFile(path, "rw");
             filePath = path; // ✅ Store the path
         } catch (IOException e) {
             e.printStackTrace();
@@ -197,10 +197,41 @@ public class RandomFile {
     return matchingEmployees;
 }
 
-    public boolean updateEmployeeInFile(Employee updatedEmployee) {
-        // TODO: Implement this
-        return false;
+public boolean updateEmployeeInFile(Employee updatedEmployee) {
+    try {
+        file.seek(0); // Start from the beginning of the file
+
+        while (file.getFilePointer() < file.length()) {
+            long position = file.getFilePointer(); // Store current position
+            Employee employee = readRecords(position); // Read the current record
+
+            if (employee.getEmployeeId() == updatedEmployee.getEmployeeId()) { // Match found
+                file.seek(position); // Move back to the correct position
+
+                RandomAccessEmployeeRecord record = new RandomAccessEmployeeRecord(
+                    updatedEmployee.getEmployeeId(),
+                    updatedEmployee.getPps(),
+                    updatedEmployee.getSurname(),
+                    updatedEmployee.getFirstName(),
+                    updatedEmployee.getGender(),
+                    updatedEmployee.getDepartment(),
+                    updatedEmployee.getSalary(),
+                    updatedEmployee.getFullTime()
+                );
+
+                record.write(file); // Overwrite the existing record
+                file.getFD().sync(); // Ensure the data is written immediately
+                System.out.println("Employee updated successfully: " + updatedEmployee); 
+                return true;
+            }
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
     }
+    System.out.println("Employee not found for update: " + updatedEmployee.getEmployeeId()); 
+    return false; // Employee ID not found
+}
+
 
     public Employee findEmployeeById(int id) {
         try {
@@ -290,5 +321,25 @@ public class RandomFile {
         }
     }
     
+    public void addEmployee(Employee newEmployee) {
+        try {
+            if (file == null) {
+                System.out.println("Error: File is not open!");
+                openWriteFile(filePath);
+            }
+    
+            file.seek(file.length()); // Move to the end of the file
+            RandomAccessEmployeeRecord record = new RandomAccessEmployeeRecord(
+                newEmployee.getEmployeeId(), newEmployee.getPps(), newEmployee.getSurname(),
+                newEmployee.getFirstName(), newEmployee.getGender(), newEmployee.getDepartment(),
+                newEmployee.getSalary(), newEmployee.getFullTime()
+            );
+            record.write(file);
+            file.getFD().sync(); // Ensure data is written
+            System.out.println("Employee added to file: " + newEmployee); // ✅ Debugging
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     
 }

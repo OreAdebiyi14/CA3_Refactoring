@@ -525,33 +525,57 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 	public void searchEmployeeBySurname() {
 		searchSurname.addActionListener(e -> {
 			String surname = searchBySurnameField.getText().trim().toUpperCase();
-			Employee employee = controller.searchEmployeeBySurname(surname);
-		
-			if (employee != null) {
-				displayRecords(employee);
+			List<Employee> employees = controller.searchEmployeeBySurname(surname); // ✅ Get List<Employee>
+			
+			if (!employees.isEmpty()) {
+				if (employees.size() == 1) {
+					// If only one employee found, display it directly
+					displayRecords(employees.get(0));
+				} else {
+					// If multiple employees found, show them in EmployeeSummaryDialog
+					Vector<Vector<Object>> employeeData = new Vector<>();
+	
+					for (Employee emp : employees) {
+						Vector<Object> row = new Vector<>();
+						row.add(emp.getEmployeeId());
+						row.add(emp.getPps());
+						row.add(emp.getSurname());
+						row.add(emp.getFirstName());
+						row.add(emp.getGender());
+						row.add(emp.getDepartment());
+						row.add(emp.getSalary());
+						row.add(emp.getFullTime());
+						employeeData.add(row);
+					}
+	
+					new EmployeeSummaryDialog(employeeData); // ✅ Pass all matching employees
+				}
 			} else {
 				JOptionPane.showMessageDialog(null, "Employee not found!");
 			}
 			searchBySurnameField.setText("");
 		});
-		
-	}// end searchEmployeeBySurname
+	}
+	// end searchEmployeeBySurname
 
 	// get next free ID from Employees in the file
 	public int getNextFreeId() {
-		int nextFreeId = 0;
+		if (filePath == null || filePath.isEmpty()) {
+			filePath = "employees.dat"; 
+		}
+		application.openReadFile(filePath);
+		int nextFreeId = 1;
 		// if file is empty or all records are empty start with ID 1 else look
 		// for last active record
 		try {
 			if (file.length() == 0 || !isSomeoneToDisplay())
-				nextFreeId++;
+				return nextFreeId;
 			else {
 				lastRecord();// look for last active record
 				// add 1 to last active records ID to get next ID
 				nextFreeId = currentEmployee.getEmployeeId() + 1;
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return nextFreeId;
@@ -559,7 +583,8 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 
 	// get values from text fields and create Employee object
 	private Employee getChangedDetails() {
-		boolean fullTime = fullTimeCombo.getSelectedItem().toString().equalsIgnoreCase("Yes");
+		
+	boolean fullTime = fullTimeCombo.getSelectedItem().toString().equalsIgnoreCase("Yes");
 
 		return new Employee(
 			Integer.parseInt(idField.getText()),
@@ -575,7 +600,10 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 
 	// add Employee object to fail
 	public void addRecord(Employee newEmployee) {
+		System.out.println("Writing to file: " + newEmployee);
+		application.openWriteFile(filePath); 
 		controller.addEmployee(newEmployee);
+		application.closeWriteFile();
 		notifyObservers();
 	}
 	// end addRecord
@@ -890,22 +918,24 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 
 	// save changes to current Employee
 	private void saveChanges() {
-		int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to save changes to current Employee?", "Save",
+		int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to save changes?", "Save",
 				JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
-		// if user choose to save changes, save changes
+	
 		if (returnVal == JOptionPane.YES_OPTION) {
-			// open file for writing
-			application.openWriteFile(filePath);
-			// get changes for current Employee
-			currentEmployee = getChangedDetails();
-			// write changes to file for corresponding Employee record
-			application.changeRecords(currentEmployee, currentByteStart);
-			application.closeWriteFile();// close file for writing
-			changesMade = false;// state that all changes has bee saved
-		} // end if
-		displayRecords(currentEmployee);
-		setEnabled(false);
-	}// end saveChanges
+			Employee updatedEmployee = getChangedDetails();
+			if (updatedEmployee == null) return; // Prevent saving if invalid data
+	
+			boolean success = application.updateEmployeeInFile(updatedEmployee);
+			if (success) {
+				JOptionPane.showMessageDialog(null, "Employee updated successfully!");
+				displayRecords(updatedEmployee);
+				changesMade = false;
+			} else {
+				JOptionPane.showMessageDialog(null, "Error: Employee update failed!", "Update Error", JOptionPane.ERROR_MESSAGE);
+			}
+		}
+	}
+	// end saveChanges
 
 	// save file as 'save as'
 	private void saveFileAs() {
