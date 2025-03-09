@@ -114,7 +114,7 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 		observers.add(observer);
 	}
 
-	private void notifyObservers() {
+	public void notifyObservers() {
 		for (EmployeeObserver observer : observers) {
 			observer.update();
 		}
@@ -518,8 +518,8 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 		searchId.addActionListener(e -> {
 			try {
 				int id = Integer.parseInt(searchByIdField.getText().trim());
-				Employee employee = controller.searchEmployeeById(id);
-		
+				Employee employee = application.findEmployeeById(id);
+
 				if (employee != null) {
 					displayRecords(employee);
 				} else {
@@ -539,8 +539,8 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 	public void searchEmployeeBySurname() {
 		searchSurname.addActionListener(e -> {
 			String surname = searchBySurnameField.getText().trim().toUpperCase();
-			List<Employee> employees = controller.searchEmployeeBySurname(surname); //   Get List<Employee>
-			
+			List<Employee> employees = application.findEmployeeBySurname(surname);
+
 			if (!employees.isEmpty()) {
 				if (employees.size() == 1) {
 					// If only one employee found, display it directly
@@ -574,36 +574,39 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 
 	// get next free ID from Employees in the file
 	public int getNextFreeId() {
-		try {
-			if (file == null) { // If file isn't open, open it
-				file = new RandomAccessFile(filePath, "rw");
-			}
+		ensureFilePathInitialized();
 	
-			if (file.length() == 0 || !isSomeoneToDisplay()) { 
-				System.out.println("DEBUG: No records found. Setting first ID to 1.");
-				return 1;
-			}
+		application.openReadFile(filePath);
+		long lastPosition = application.getLast();
 	
-			application.openReadFile(filePath); //   Open file before checking
+		if (lastPosition < 0) {
+			System.out.println("DEBUG: No valid records found. Setting first ID to 1.");
+			application.closeReadFile();
+			return 1;
+		}
 	
-			long lastPosition = application.getLast(); //   Get last record position
-			Employee lastEmployee = application.readRecords(lastPosition);
+		Employee lastEmployee = application.readRecords(lastPosition);
+		application.closeReadFile();
 	
-			application.closeReadFile(); //   Close file after reading
-	
-			if (lastEmployee != null) {
-				int newId = lastEmployee.getEmployeeId() + 1;
-				System.out.println("DEBUG: Next available ID: " + newId);
-				return newId;
-			} else {
-				return 1;
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
+		if (lastEmployee != null && lastEmployee.getEmployeeId() > 0) {
+			int newId = lastEmployee.getEmployeeId() + 1;
+			System.out.println("DEBUG: Next available ID: " + newId);
+			return newId;
+		} else {
+			System.out.println("DEBUG: No valid last employee found. Returning ID = 1");
 			return 1;
 		}
 	}
+	
 	// end getNextFreeId
+
+	public void ensureFilePathInitialized() {
+		if (filePath == null || filePath.isEmpty()) {
+			filePath = "employees.dat"; // Assign a default file
+			System.out.println("DEBUG: Assigned default file path: " + filePath);
+			application.createFile(filePath);
+		}
+	}
 
 	// get values from text fields and create Employee object
 	private Employee getChangedDetails() {
@@ -632,12 +635,21 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 
 	// add Employee object to fail
 	public void addRecord(Employee newEmployee) {
-		System.out.println("Writing to file: " + newEmployee);
-		application.openWriteFile(filePath); 
+		ensureFilePathInitialized();
+	
+		System.out.println("DEBUG: Writing to file: " + newEmployee);
+		application.openWriteFile(filePath);
 		controller.addEmployee(newEmployee);
 		application.closeWriteFile();
+	
+		// Ensure the next available ID updates correctly
+		currentEmployee = newEmployee;
+		displayRecords(newEmployee);
 		notifyObservers();
+	
+		System.out.println("DEBUG: Next free ID after adding: " + getNextFreeId());
 	}
+	
 	// end addRecord
 
 	// delete (make inactive - empty) record from file
@@ -974,6 +986,7 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 				JOptionPane.showMessageDialog(null, "Employee updated successfully!");
 				displayRecords(updatedEmployee);
 				changesMade = false;
+
 			} else {
 				JOptionPane.showMessageDialog(null, "Error: Employee update failed!", "Update Error", JOptionPane.ERROR_MESSAGE);
 			}

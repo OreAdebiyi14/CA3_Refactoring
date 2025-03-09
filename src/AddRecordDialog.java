@@ -101,8 +101,8 @@ public class AddRecordDialog extends JDialog implements ActionListener {
 			if (empDetails.getComponent(i) instanceof JComboBox) {
 				empDetails.getComponent(i).setBackground(Color.WHITE);
 			}// end if
-			else if(empDetails.getComponent(i) instanceof JTextField){
-				field = (JTextField) empDetails.getComponent(i);
+			else if(empDetails.getComponent(i) instanceof JTextField jTextField){
+				field = jTextField;
 				if(field == ppsField)
 					field.setDocument(new JTextFieldLimit(9));
 				else
@@ -135,6 +135,7 @@ public class AddRecordDialog extends JDialog implements ActionListener {
 		this.parent.currentEmployee = theEmployee;
 		this.parent.addRecord(theEmployee);
 		this.parent.displayRecords(theEmployee);
+		
 	}
 
 	// check for input in text fields

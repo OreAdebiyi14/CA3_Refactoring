@@ -72,14 +72,18 @@ public class SearchBySurnameDialog extends JDialog implements ActionListener{
 	}// end searchPane
 
 	// action listener for save and cancel button
+    @Override
 	public void actionPerformed(ActionEvent e) {
 		if (e.getSource() == search) {
-			List<Employee> employees = parent.getController().searchEmployeeBySurname(searchField.getText());
+			String surname = searchField.getText().trim().toUpperCase();
+        	System.out.println("DEBUG: Searching for employees with surname: " + surname);
+        
+			List<Employee> employees = parent.getApplication().findEmployeeBySurname(surname);
 			Vector<Vector<Object>> employeeData = new Vector<>();
 
 			if (employees.isEmpty()) {
 				JOptionPane.showMessageDialog(this, "No employees found with that surname.");
-				
+			} else {
 				for (Employee emp : employees) {
 					Vector<Object> row = new Vector<>();
 					row.add(emp.getEmployeeId());
@@ -91,8 +95,7 @@ public class SearchBySurnameDialog extends JDialog implements ActionListener{
 					row.add(emp.getSalary());
 					row.add(emp.getFullTime());
 					employeeData.add(row);
-    				}	
-			} else {
+			}
 				new EmployeeSummaryDialog(employeeData);
 			}
 			dispose();
