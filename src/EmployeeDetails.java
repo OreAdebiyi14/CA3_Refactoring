@@ -404,7 +404,7 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 
 	// display Employee summary dialog
 	private void displayEmployeeSummaryDialog() {
-		Vector<Vector<Object>> employees = getAllEmployees(); // ✅ Get employee data safely
+		Vector<Vector<Object>> employees = getAllEmployees(); // Get employee data safely
 	
 		if (employees.isEmpty()) {
 			JOptionPane.showMessageDialog(null, "No employees found!", "Info", JOptionPane.INFORMATION_MESSAGE);
@@ -421,7 +421,7 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 	// display search by ID dialog
 	private void displaySearchByIdDialog() {
 		if (isSomeoneToDisplay()) {
-			SearchByIdDialog dialog = new SearchByIdDialog(EmployeeDetails.this); // ✅ Store instance
+			SearchByIdDialog dialog = new SearchByIdDialog(EmployeeDetails.this); // Store instance
 			dialog.setVisible(true);
 		}
 	}
@@ -430,7 +430,7 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 	// display search by surname dialog
 	private void displaySearchBySurnameDialog() {
 		if (isSomeoneToDisplay()) {
-			SearchBySurnameDialog dialog = new SearchBySurnameDialog(EmployeeDetails.this); // ✅ Store instance
+			SearchBySurnameDialog dialog = new SearchBySurnameDialog(EmployeeDetails.this); //   Store instance
 			dialog.setVisible(true);// Ensure the dialog is displayed
 		}
 	} //end displaySearchBySurnameDialog
@@ -539,7 +539,7 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 	public void searchEmployeeBySurname() {
 		searchSurname.addActionListener(e -> {
 			String surname = searchBySurnameField.getText().trim().toUpperCase();
-			List<Employee> employees = controller.searchEmployeeBySurname(surname); // ✅ Get List<Employee>
+			List<Employee> employees = controller.searchEmployeeBySurname(surname); //   Get List<Employee>
 			
 			if (!employees.isEmpty()) {
 				if (employees.size() == 1) {
@@ -562,7 +562,7 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 						employeeData.add(row);
 					}
 	
-					new EmployeeSummaryDialog(employeeData); // ✅ Pass all matching employees
+					new EmployeeSummaryDialog(employeeData); //   Pass all matching employees
 				}
 			} else {
 				JOptionPane.showMessageDialog(null, "Employee not found!");
@@ -574,25 +574,33 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 
 	// get next free ID from Employees in the file
 	public int getNextFreeId() {
-		if (file == null) { // If file isn't open, open it
-			try {
-				file = new RandomAccessFile("employees.dat", "rw");
-			} catch (FileNotFoundException e) {
-				
-				e.printStackTrace();
-			} // Default file
-		}
-	
 		try {
-			if (file.length() == 0 || !isSomeoneToDisplay()) {
+			if (file == null) { // If file isn't open, open it
+				file = new RandomAccessFile(filePath, "rw");
+			}
+	
+			if (file.length() == 0 || !isSomeoneToDisplay()) { 
+				System.out.println("DEBUG: No records found. Setting first ID to 1.");
 				return 1;
+			}
+	
+			application.openReadFile(filePath); //   Open file before checking
+	
+			long lastPosition = application.getLast(); //   Get last record position
+			Employee lastEmployee = application.readRecords(lastPosition);
+	
+			application.closeReadFile(); //   Close file after reading
+	
+			if (lastEmployee != null) {
+				int newId = lastEmployee.getEmployeeId() + 1;
+				System.out.println("DEBUG: Next available ID: " + newId);
+				return newId;
 			} else {
-				lastRecord();
-				return currentEmployee.getEmployeeId() + 1;
+				return 1;
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-			return 1; // Default to 1 if error occurs
+			return 1;
 		}
 	}
 	// end getNextFreeId
@@ -650,18 +658,11 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 		Vector<Vector<Object>> allEmployees = new Vector<>();
 	
 		try {
-			application.openReadFile(filePath); // ✅ Ensure file is open
+			application.openReadFile(filePath); // Ensure file is open
 	
-			if (!isSomeoneToDisplay()) { 
-				System.out.println("DEBUG: No employees found in the file.");
-				JOptionPane.showMessageDialog(null, "No Employees registered!", "Error", JOptionPane.ERROR_MESSAGE);
-				return allEmployees;
-			}
-	
-			long byteStart = application.getFirst(); // ✅ Get first employee
-			while (byteStart != -1) {
-				System.out.println("DEBUG: Reading Employee at position " + byteStart);
-	
+			long byteStart = 0;
+
+			while (byteStart != -1 && byteStart < application.getFileLength()) {
 				Employee currentEmployee = application.readRecords(byteStart);
 	
 				if (currentEmployee != null && currentEmployee.getEmployeeId() != 0) {
@@ -677,18 +678,18 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 					allEmployees.add(empDetails);
 				}
 	
-				byteStart = application.getNext(byteStart); // ✅ Move to next employee
+				byteStart += RandomAccessEmployeeRecord.SIZE; //   Move to next employee
 			}
 	
-			application.closeReadFile(); // ✅ Close file after reading
+			application.closeReadFile(); //   Close file after reading
 		} catch (Exception e) {
 			e.printStackTrace();
 			JOptionPane.showMessageDialog(null, "Error loading employees!", "Error", JOptionPane.ERROR_MESSAGE);
 		}
 	
+		System.out.println("DEBUG: Total employees found: " + allEmployees.size());
 		return allEmployees;
 	}
-	
 	// end getAllEmployees
 
 	// activate field for editing
@@ -884,35 +885,35 @@ public class EmployeeDetails<currentEmployee> extends JFrame implements ActionLi
 		// Display files in File Chooser only with extension .dat
 		fc.setFileFilter(datfilter);
 		
-		File newFile; // ✅ Declare as File
+		File newFile; //   Declare as File
 		// If old file is not empty or changes have been made, offer the user to save old file
 		if (file.length() != 0 || change) {
 			int returnVal = JOptionPane.showOptionDialog(frame, "Do you want to save changes?", "Save",
 					JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, null, null);
 			// If user wants to save file, save it
 			if (returnVal == JOptionPane.YES_OPTION) {
-				saveFile(); // ✅ Save file
+				saveFile(); //   Save file
 			}
 		}
 	
 		int returnVal = fc.showOpenDialog(EmployeeDetails.this);
 		// If file has been chosen, open it
 		if (returnVal == JFileChooser.APPROVE_OPTION) {
-			newFile = fc.getSelectedFile(); // ✅ Correct: now newFile is of type File
+			newFile = fc.getSelectedFile(); //   Correct: now newFile is of type File
 	
 			// If old file wasn't saved and its name is a generated file name, delete this file
 			if (filePath.equals(generatedFileName)) {
 				if (new File(filePath).exists()) {
-					new File(filePath).delete(); // ✅ Delete the old file
+					new File(filePath).delete(); //   Delete the old file
 				}
 			}
 	
-			// ✅ Open the selected file as a RandomAccessFile
+			//   Open the selected file as a RandomAccessFile
 			application.openReadFile(newFile.getAbsolutePath()); 
 	
-			firstRecord(); // ✅ Look for the first record
+			firstRecord(); //   Look for the first record
 			displayRecords(currentEmployee);
-			application.closeReadFile(); // ✅ Close file for reading
+			application.closeReadFile(); //   Close file for reading
 		}
 	}
 	// end openFile
